@@ -1,6 +1,6 @@
 package com.example.demo;
 
-import javax.persistence.*;
+import jakarta.persistence.*; // 替换 javax 为 jakarta
 
 @Entity
 @Table(name = "t_user")

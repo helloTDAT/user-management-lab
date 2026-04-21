@@ -1,0 +1,4 @@
+mode:
+  type: Standalone
+props:
+  sql-show: true

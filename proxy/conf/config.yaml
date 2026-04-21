@@ -1,0 +1,27 @@
+databaseName: user_db
+dataSources:
+  ds_master:
+    url: jdbc:mysql://ds_master:3306/user_db?useSSL=false&allowPublicKeyRetrieval=true
+    username: root
+    password: root
+    type: com.zaxxer.hikari.HikariDataSource
+  ds_slave_0:
+    url: jdbc:mysql://ds_slave_0:3306/user_db?useSSL=false&allowPublicKeyRetrieval=true
+    username: root
+    password: root
+    type: com.zaxxer.hikari.HikariDataSource
+  ds_slave_1:
+    url: jdbc:mysql://ds_slave_1:3306/user_db?useSSL=false&allowPublicKeyRetrieval=true
+    username: root
+    password: root
+    type: com.zaxxer.hikari.HikariDataSource
+
+rules:
+  - !READWRITE_SPLITTING
+    tables:
+      t_user:
+        staticStrategy:
+          writeDataSourceName: ds_master
+          readDataSourceNames:
+            - ds_slave_0
+            - ds_slave_1

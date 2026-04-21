@@ -1,124 +1,76 @@
-version: "3.8"
 services:
-  mysql-master:
+  ds_master:
     image: mysql:8.0
     container_name: ds_master
-    restart: always
     environment:
       MYSQL_ROOT_PASSWORD: root
-      MYSQL_DATABASE: demo
-      MYSQL_USER: demo
-      MYSQL_PASSWORD: demo
-    ports:
-      - "3307:3306"
-    volumes:
-      - ./mysql/master.cnf:/etc/mysql/my.cnf
     networks:
-      mynet:
-        ipv4_address: 172.30.0.2
+      - mynet
+    ports:
+      - "3316:3306"
 
-  mysql-slave0:
+  ds_slave_0:
     image: mysql:8.0
     container_name: ds_slave_0
-    restart: always
     environment:
       MYSQL_ROOT_PASSWORD: root
-      MYSQL_DATABASE: demo
-      MYSQL_USER: demo
-      MYSQL_PASSWORD: demo
-    depends_on:
-      - mysql-master
-    ports:
-      - "3308:3306"
-    command:
-      --server-id=2
-    volumes:
-      - ./mysql/slave.cnf:/etc/mysql/my.cnf
     networks:
-      mynet:
-        ipv4_address: 172.30.0.3
+      - mynet
+    ports:
+      - "3317:3306"
 
-  mysql-slave1:
+  ds_slave_1:
     image: mysql:8.0
     container_name: ds_slave_1
-    restart: always
     environment:
       MYSQL_ROOT_PASSWORD: root
-      MYSQL_DATABASE: demo
-      MYSQL_USER: demo
-      MYSQL_PASSWORD: demo
-    depends_on:
-      - mysql-master
-    ports:
-      - "3309:3306"
-    command:
-      --server-id=3
-    volumes:
-      - ./mysql/slave.cnf:/etc/mysql/my.cnf
     networks:
-      mynet:
-        ipv4_address: 172.30.0.4
+      - mynet
+    ports:
+      - "3318:3306"
 
   shardingsphere-proxy:
     image: apache/shardingsphere-proxy:5.4.1
     container_name: shardingsphere-proxy
-    ports:
-      - "33060:33060"
-    depends_on:
-      - mysql-master
-      - mysql-slave0
-      - mysql-slave1
-    environment:
-      - TZ=Asia/Shanghai
-    volumes:
-      - ./shardingsphere-proxy/server.yaml:/opt/shardingsphere-proxy/conf/server.yaml
     networks:
-      mynet:
-        ipv4_address: 172.30.0.5
+      - mynet
+    volumes:
+      - ./proxy/conf:/opt/shardingsphere-proxy/conf
+    ports:
+      - "33161:3307"
+    restart: always
 
   springboot-app1:
-    build: ./springboot-app
+    build: .
     container_name: springboot-app1
-    depends_on:
-      - shardingsphere-proxy
-    environment:
-      - SERVER_PORT=8080
-    ports:
-      - "8081:8080"
     networks:
-      mynet:
-        ipv4_address: 172.30.0.6
+      - mynet
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://shardingsphere-proxy:3307/user_db?useSSL=false&allowPublicKeyRetrieval=true
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: root
+    restart: always
 
   springboot-app2:
-    build: ./springboot-app
+    build: .
     container_name: springboot-app2
-    depends_on:
-      - shardingsphere-proxy
-    environment:
-      - SERVER_PORT=8080
-    ports:
-      - "8082:8080"
     networks:
-      mynet:
-        ipv4_address: 172.30.0.7
+      - mynet
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://shardingsphere-proxy:3307/user_db?useSSL=false&allowPublicKeyRetrieval=true
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: root
+    restart: always
 
   nginx:
     image: nginx:latest
     container_name: nginx
+    networks:
+      - mynet
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
     ports:
       - "80:80"
-    depends_on:
-      - springboot-app1
-      - springboot-app2
-    volumes:
-      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-    networks:
-      mynet:
-        ipv4_address: 172.30.0.8
 
 networks:
   mynet:
-    driver: bridge
-    ipam:
-      config:
-        - subnet: 172.30.0.0/16
