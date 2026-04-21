@@ -1,0 +1,68 @@
+databaseName: user_db
+
+dataSources:
+  ds_master:
+    url: jdbc:mysql://ds_master:3306/user_db?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC&characterEncoding=utf8
+    username: root
+    password: root
+    connectionTimeoutMilliseconds: 30000
+    idleTimeoutMilliseconds: 60000
+    maxLifetimeMilliseconds: 1800000
+    maxPoolSize: 50
+    minPoolSize: 1
+
+  ds_slave_0:
+    url: jdbc:mysql://ds_slave_0:3306/user_db?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC&characterEncoding=utf8
+    username: root
+    password: root
+    connectionTimeoutMilliseconds: 30000
+    idleTimeoutMilliseconds: 60000
+    maxLifetimeMilliseconds: 1800000
+    maxPoolSize: 50
+    minPoolSize: 1
+
+  ds_slave_1:
+    url: jdbc:mysql://ds_slave_1:3306/user_db?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC&characterEncoding=utf8
+    username: root
+    password: root
+    connectionTimeoutMilliseconds: 30000
+    idleTimeoutMilliseconds: 60000
+    maxLifetimeMilliseconds: 1800000
+    maxPoolSize: 50
+    minPoolSize: 1
+
+rules:
+  # 1. 读写分离规则配置
+  - !READWRITE_SPLITTING
+    dataSources:
+      pr_ds_0:
+        staticStrategy:
+          writeDataSourceName: ds_master
+          readDataSourceNames:
+            - ds_slave_0
+        loadBalancerName: round_robin
+      pr_ds_1:
+        staticStrategy:
+          writeDataSourceName: ds_master
+          readDataSourceNames:
+            - ds_slave_1
+        loadBalancerName: round_robin
+    loadBalancers:
+      round_robin:
+        type: ROUND_ROBIN
+
+  # 2. 数据分片规则配置
+  - !SHARDING
+    tables:
+      t_user:
+        # 将数据节点映射到上方的两个逻辑读写分离数据源
+        actualDataNodes: pr_ds_${0..1}.t_user
+        databaseStrategy:
+          standard:
+            shardingColumn: user_id
+            shardingAlgorithmName: user_id_mod
+    shardingAlgorithms:
+      user_id_mod:
+        type: MOD
+        props:
+          sharding-count: 2
